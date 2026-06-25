@@ -1,0 +1,16 @@
+[
+  { "store_id": "store_1", "bean_id": "bean_1", "stock_kg": 5.2, "updated_at": "2026-06-25T08:00:00Z" },
+  { "store_id": "store_1", "bean_id": "bean_2", "stock_kg": 3.8, "updated_at": "2026-06-25T08:00:00Z" },
+  { "store_id": "store_1", "bean_id": "bean_3", "stock_kg": 1.5, "updated_at": "2026-06-25T08:00:00Z" },
+  { "store_id": "store_1", "bean_id": "bean_4", "stock_kg": 6.0, "updated_at": "2026-06-25T08:00:00Z" },
+
+  { "store_id": "store_2", "bean_id": "bean_1", "stock_kg": 4.0, "updated_at": "2026-06-25T08:00:00Z" },
+  { "store_id": "store_2", "bean_id": "bean_2", "stock_kg": 2.5, "updated_at": "2026-06-25T08:00:00Z" },
+  { "store_id": "store_2", "bean_id": "bean_3", "stock_kg": 3.2, "updated_at": "2026-06-25T08:00:00Z" },
+  { "store_id": "store_2", "bean_id": "bean_4", "stock_kg": 1.8, "updated_at": "2026-06-25T08:00:00Z" },
+
+  { "store_id": "store_3", "bean_id": "bean_1", "stock_kg": 2.1, "updated_at": "2026-06-25T08:00:00Z" },
+  { "store_id": "store_3", "bean_id": "bean_2", "stock_kg": 4.5, "updated_at": "2026-06-25T08:00:00Z" },
+  { "store_id": "store_3", "bean_id": "bean_3", "stock_kg": 2.8, "updated_at": "2026-06-25T08:00:00Z" },
+  { "store_id": "store_3", "bean_id": "bean_4", "stock_kg": 5.5, "updated_at": "2026-06-25T08:00:00Z" }
+]

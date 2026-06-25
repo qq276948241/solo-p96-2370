@@ -1,0 +1,5 @@
+[
+  { "id": "store_1", "name": "阳光花园店", "address": "阳光花园小区1号楼底商" },
+  { "id": "store_2", "name": "翠湖天地店", "address": "翠湖天地商业街A-12" },
+  { "id": "store_3", "name": "金色港湾店", "address": "金色港湾东门旁" }
+]
