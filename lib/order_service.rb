@@ -23,10 +23,10 @@ module OrderService
     note = params[:note]
 
     store = DataStore.find_store(store_id)
-    return { error: '门店不存在', status: 404 } unless store
+    return { error: '门店不存在', status: 400 } unless store
 
     bean = DataStore.find_bean(bean_id)
-    return { error: '豆子品种不存在', status: 404 } unless bean
+    return { error: '豆子品种不存在', status: 400 } unless bean
 
     unless VALID_CUP_SIZES.include?(cup_size)
       return { error: "杯型无效，可选值：#{VALID_CUP_SIZES.join('、')}", status: 400 }
@@ -69,7 +69,7 @@ module OrderService
 
   def self.get_order(order_id)
     order = DataStore.find_order(order_id)
-    return { error: '订单不存在', status: 404 } unless order
+    return { error: '订单不存在', status: 400 } unless order
     { order: decorate_order(order) }
   end
 
@@ -89,7 +89,7 @@ module OrderService
   def self.cancel_order(order_id, reason = nil)
     orders = DataStore.orders
     idx = orders.index { |o| o['id'] == order_id }
-    return { error: '订单不存在', status: 404 } unless idx
+    return { error: '订单不存在', status: 400 } unless idx
 
     order = orders[idx]
     unless CANCELLABLE_STATUSES.include?(order['status'])
@@ -122,7 +122,7 @@ module OrderService
 
     orders = DataStore.orders
     idx = orders.index { |o| o['id'] == order_id }
-    return { error: '订单不存在', status: 404 } unless idx
+    return { error: '订单不存在', status: 400 } unless idx
 
     order = orders[idx]
     allowed = valid_transitions[order['status']] || []
@@ -174,6 +174,75 @@ module OrderService
       created_at: order['created_at'],
       cancelled_at: order['cancelled_at'],
       cancel_reason: order['cancel_reason']
+    }
+  end
+
+  def self.daily_summary(store_id, date_str)
+    store = DataStore.find_store(store_id)
+    return { error: '门店不存在', status: 400 } unless store
+
+    begin
+      target_date = Date.parse(date_str)
+    rescue ArgumentError
+      return { error: '日期格式无效，请使用 YYYY-MM-DD', status: 400 }
+    end
+
+    records = DataStore.orders.select do |o|
+      next false unless o['store_id'] == store_id
+      next false if o['status'] == STATUS_CANCELLED
+      order_date = Time.parse(o['pickup_time']).to_date
+      order_date == target_date
+    end
+
+    if records.empty?
+      return {
+        store_id: store_id,
+        store_name: store['name'],
+        date: target_date.strftime('%Y-%m-%d'),
+        total_orders: 0,
+        total_cups: 0,
+        most_popular_bean: nil,
+        bean_rank: [],
+        no_data: true,
+        note: '当日暂无有效订单记录'
+      }
+    end
+
+    total_cups = records.sum { |o| o['quantity'].to_i }
+
+    bean_counts = Hash.new(0)
+    records.each do |o|
+      bean_counts[o['bean_id']] += o['quantity'].to_i
+    end
+
+    bean_rank = bean_counts.map do |bean_id, cups|
+      bean = DataStore.find_bean(bean_id)
+      {
+        bean_id: bean_id,
+        bean_name: bean ? bean['name'] : '未知豆子',
+        cups: cups
+      }
+    end.sort_by { |b| -b[:cups] }
+
+    top = bean_rank.first
+    most_popular = if top
+                     {
+                       bean_id: top[:bean_id],
+                       bean_name: top[:bean_name],
+                       cups: top[:cups],
+                       share: "#{((top[:cups].to_f / total_cups) * 100).round(1)}%"
+                     }
+                   end
+
+    {
+      store_id: store_id,
+      store_name: store['name'],
+      date: target_date.strftime('%Y-%m-%d'),
+      total_orders: records.size,
+      total_cups: total_cups,
+      most_popular_bean: most_popular,
+      bean_rank: bean_rank,
+      no_data: false
     }
   end
 end

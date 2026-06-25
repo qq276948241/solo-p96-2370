@@ -1,11 +1,12 @@
 require_relative 'data_store'
+require 'time'
 
 module InventoryService
   include DataStore
 
   def self.list_by_store(store_id)
     store = DataStore.find_store(store_id)
-    return { error: '门店不存在', status: 404 } unless store
+    return { error: '门店不存在', status: 400 } unless store
 
     items = DataStore.inventory.select { |i| i['store_id'] == store_id }
     items_with_warning = items.map do |item|
@@ -32,13 +33,13 @@ module InventoryService
 
   def self.record_consumption(store_id, bean_id, amount_kg, note = nil)
     store = DataStore.find_store(store_id)
-    return { error: '门店不存在', status: 404 } unless store
+    return { error: '门店不存在', status: 400 } unless store
 
     bean = DataStore.find_bean(bean_id)
-    return { error: '豆子品种不存在', status: 404 } unless bean
+    return { error: '豆子品种不存在', status: 400 } unless bean
 
     inv = DataStore.find_inventory(store_id, bean_id)
-    return { error: '该门店无此豆子库存记录', status: 404 } unless inv
+    return { error: '该门店无此豆子库存记录', status: 400 } unless inv
 
     if amount_kg <= 0
       return { error: '消耗量必须大于0', status: 400 }
@@ -108,6 +109,61 @@ module InventoryService
       total_alerts: low_items.size,
       threshold_kg: DataStore::REPLENISH_THRESHOLD_KG,
       alerts: low_items.sort_by { |a| a[:current_stock_kg] }
+    }
+  end
+
+  def self.consumption_summary_by_date(store_id, date_str)
+    store = DataStore.find_store(store_id)
+    return { error: '门店不存在', status: 400 } unless store
+
+    begin
+      target_date = Date.parse(date_str)
+    rescue ArgumentError
+      return { error: '日期格式无效，请使用 YYYY-MM-DD', status: 400 }
+    end
+
+    records = DataStore.consumptions.select do |r|
+      next false unless r['store_id'] == store_id
+      record_date = Time.parse(r['created_at']).to_date
+      record_date == target_date
+    end
+
+    if records.empty?
+      return {
+        store_id: store_id,
+        store_name: store['name'],
+        date: target_date.strftime('%Y-%m-%d'),
+        total_consumed_kg: 0.0,
+        bean_breakdown: [],
+        no_data: true,
+        note: '当日暂无豆子消耗记录'
+      }
+    end
+
+    bean_totals = Hash.new(0.0)
+    records.each do |r|
+      bean_totals[r['bean_id']] += r['amount_kg'].to_f
+    end
+
+    breakdown = bean_totals.map do |bean_id, kg|
+      bean = DataStore.find_bean(bean_id)
+      {
+        bean_id: bean_id,
+        bean_name: bean ? bean['name'] : '未知豆子',
+        consumed_kg: kg.round(3)
+      }
+    end.sort_by { |b| -b[:consumed_kg] }
+
+    total = breakdown.sum { |b| b[:consumed_kg] }.round(3)
+
+    {
+      store_id: store_id,
+      store_name: store['name'],
+      date: target_date.strftime('%Y-%m-%d'),
+      total_consumed_kg: total,
+      bean_breakdown: breakdown,
+      records_count: records.size,
+      no_data: false
     }
   end
 end

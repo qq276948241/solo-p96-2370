@@ -42,6 +42,12 @@ bundle exec rackup -p 3001
 | GET | `/stores` | 查询所有门店 |
 | GET | `/beans` | 查询所有豆子品种 |
 
+### 报表模块
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/reports/daily?store_id=xxx&date=YYYY-MM-DD` | 每日经营报表（豆子总消耗、订单总杯数、最受欢迎豆子）。date 不传默认取昨天；缺数据时返回友好提示而非报错。 |
+
 ### 豆子库存模块
 
 | 方法 | 路径 | 说明 |
@@ -109,6 +115,29 @@ curl -X PATCH http://localhost:3001/orders/xxx/cancel \
 ```bash
 curl http://localhost:3001/inventory/alerts
 ```
+
+### 每日经营报表
+
+```bash
+# 指定门店 + 日期
+curl "http://localhost:3001/reports/daily?store_id=store_1&date=2026-06-25"
+
+# 不传日期 = 默认取昨天
+curl "http://localhost:3001/reports/daily?store_id=store_1"
+```
+
+返回示例（有数据）：
+```json
+{
+  "store_name": "阳光花园店",
+  "date": "2026-06-25",
+  "inventory": { "total_consumed_kg": 4.1, "bean_breakdown": [...] },
+  "orders": { "total_orders": 5, "total_cups": 13, "most_popular_bean": {...} },
+  "insights": ["☕ 当日共消耗豆子 4.1 公斤...", "🏆 最受欢迎豆子..."]
+}
+```
+
+无数据时返回 HTTP 200，带 `no_data: true` 和 `friendly_hint` 友好提示。
 
 ## 订单状态流转
 

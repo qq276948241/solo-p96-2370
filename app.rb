@@ -1,10 +1,10 @@
 require 'sinatra'
 require 'sinatra/json'
-require 'sinatra/contrib/all'
 
 require_relative 'lib/data_store'
 require_relative 'lib/inventory_service'
 require_relative 'lib/order_service'
+require_relative 'lib/report_service'
 
 set :port, 3001
 set :bind, '0.0.0.0'
@@ -24,8 +24,9 @@ helpers do
 
   def send_result(result)
     if result.key?(:error)
-      status result[:status] || 400
-      json error: result[:error], **result.except(:error, :status)
+      code = result[:status] || 400
+      body = { error: result[:error], **result.except(:error, :status) }.to_json
+      halt code, body
     else
       status 200
       json result
@@ -36,7 +37,7 @@ end
 get '/' do
   json(
     name: '社区咖啡店管理API',
-    version: '1.0.0',
+    version: '1.1.0',
     port: settings.port,
     endpoints: {
       inventory: [
@@ -54,6 +55,9 @@ get '/' do
         'GET    /orders',
         'PATCH  /orders/:order_id/cancel',
         'PATCH  /orders/:order_id/status'
+      ],
+      reports: [
+        'GET    /reports/daily?store_id=xxx&date=YYYY-MM-DD'
       ]
     }
   )
@@ -143,6 +147,16 @@ patch '/orders/:order_id/status' do
     halt 400, json(error: '缺少必填参数：status')
   end
   result = OrderService.update_status(params[:order_id], body[:status])
+  send_result(result)
+end
+
+# ============ 报表模块 ============
+
+get '/reports/daily' do
+  unless params[:store_id] && !params[:store_id].empty?
+    halt 400, json(error: '缺少必填参数：store_id，例如 /reports/daily?store_id=store_1&date=2026-06-25')
+  end
+  result = ReportService.daily_report(params[:store_id], params[:date])
   send_result(result)
 end
 
